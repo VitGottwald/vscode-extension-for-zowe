@@ -35,6 +35,7 @@ import * as utils from "./utils";
 import SpoolProvider, { encodeJobFile } from "./SpoolProvider";
 import { ZoweExplorerApiRegister } from "./api/ZoweExplorerApiRegister";
 import { KeytarCredentialManager } from "./KeytarCredentialManager";
+import * as theiaPatch from "./theiaPatches";
 
 // Localization support
 const localize = nls.config({messageFormat: nls.MessageFormat.file})();
@@ -1724,31 +1725,35 @@ export async function saveFile(doc: vscode.TextDocument, datasetProvider: IZoweT
             if (node) {
                 node.setEtag(uploadResponse.apiResponse[0].etag);
             }
-        } else if (!uploadResponse.success && uploadResponse.commandResponse.includes(
-            localize("saveFile.error.ZosmfEtagMismatchError", "Rest API failure with HTTP(S) status 412"))) {
-            const downloadResponse = await ZoweExplorerApiRegister.getMvsApi(node ? node.getProfile(): profile).getContents(label, {
-                file: doc.fileName,
-                returnEtag: true
-            });
-            // re-assign etag, so that it can be used with subsequent requests
-            const downloadEtag = downloadResponse.apiResponse.etag;
-            if (node && downloadEtag !== node.getEtag()) {
-                node.setEtag(downloadEtag);
+        // TODO: remove message from localization file
+        } else if (!uploadResponse.success && uploadResponse.commandResponse.includes("Rest API failure with HTTP(S) status 412")) {
+            if (ISTHEIA) {
+                theiaPatch.willForceUploadDataSet(node, doc, label, profile);
+            } else {
+                const downloadResponse = await ZoweExplorerApiRegister.getMvsApi(node ? node.getProfile(): profile).getContents(label, {
+                    file: doc.fileName,
+                    returnEtag: true
+                });
+                // re-assign etag, so that it can be used with subsequent requests
+                const downloadEtag = downloadResponse.apiResponse.etag;
+                if (node && downloadEtag !== node.getEtag()) {
+                    node.setEtag(downloadEtag);
+                }
+                vscode.window.showWarningMessage(localize("saveFile.error.etagMismatch",
+                    "Remote file has been modified in the meantime.\nSelect 'Compare' to resolve the conflict."));
+                // Store document in a separate variable, to be used on merge conflict
+                const oldDoc = doc;
+                const oldDocText = oldDoc.getText();
+                const startPosition = new vscode.Position(0, 0);
+                const endPosition = new vscode.Position(oldDoc.lineCount, 0);
+                const deleteRange = new vscode.Range(startPosition, endPosition);
+                await vscode.window.activeTextEditor.edit((editBuilder) => {
+                    // re-write the old content in the editor view
+                    editBuilder.delete(deleteRange);
+                    editBuilder.insert(startPosition, oldDocText);
+                });
+                await vscode.window.activeTextEditor.document.save();
             }
-            vscode.window.showWarningMessage(localize("saveFile.error.etagMismatch",
-                "Remote file has been modified in the meantime.\nSelect 'Compare' to resolve the conflict."));
-            // Store document in a separate variable, to be used on merge conflict
-            const oldDoc = doc;
-            const oldDocText = oldDoc.getText();
-            const startPosition = new vscode.Position(0, 0);
-            const endPosition = new vscode.Position(oldDoc.lineCount, 0);
-            const deleteRange = new vscode.Range(startPosition, endPosition);
-            await vscode.window.activeTextEditor.edit((editBuilder) => {
-                // re-write the old content in the editor view
-                editBuilder.delete(deleteRange);
-                editBuilder.insert(startPosition, oldDocText);
-            });
-            await vscode.window.activeTextEditor.document.save();
         } else {
             vscode.window.showErrorMessage(uploadResponse.commandResponse);
         }
@@ -1827,33 +1832,37 @@ export async function saveUSSFile(doc: vscode.TextDocument, ussFileProvider: IZo
     } catch (err) {
         // TODO: error handling must not be zosmf specific
         if (err.message.includes(localize("saveFile.error.ZosmfEtagMismatchError", "Rest API failure with HTTP(S) status 412"))) {
-            // Store old document text in a separate variable, to be used on merge conflict
-            const oldDocText = doc.getText();
-            const oldDocLineCount = doc.lineCount;
-            const downloadResponse = await ZoweExplorerApiRegister.getUssApi(node.getProfile()).getContents(
-                node.fullPath, {
-                    file: node.getUSSDocumentFilePath(),
-                    binary,
-                    returnEtag: true
-                });
-            // re-assign etag, so that it can be used with subsequent requests
-            const downloadEtag = downloadResponse.apiResponse.etag;
-            if (downloadEtag !== etagToUpload) {
-                node.setEtag(downloadEtag);
-            }
-            this.downloaded = true;
+            if (ISTHEIA) {
+                theiaPatch.willForceUploadUSS(node, doc, sesNode.getProfile(), remote, binary, returnEtag);
+            } else {
+                // Store old document text in a separate variable, to be used on merge conflict
+                const oldDocText = doc.getText();
+                const oldDocLineCount = doc.lineCount;
+                const downloadResponse = await ZoweExplorerApiRegister.getUssApi(node.getProfile()).getContents(
+                    node.fullPath, {
+                        file: node.getUSSDocumentFilePath(),
+                        binary,
+                        returnEtag: true
+                    });
+                // re-assign etag, so that it can be used with subsequent requests
+                const downloadEtag = downloadResponse.apiResponse.etag;
+                if (downloadEtag !== etagToUpload) {
+                    node.setEtag(downloadEtag);
+                }
+                this.downloaded = true;
 
-            vscode.window.showWarningMessage(localize("saveFile.error.etagMismatch",
+                vscode.window.showWarningMessage(localize("saveFile.error.etagMismatch",
                 "Remote file has been modified in the meantime.\nSelect 'Compare' to resolve the conflict."));
-            const startPosition = new vscode.Position(0, 0);
-            const endPosition = new vscode.Position(oldDocLineCount, 0);
-            const deleteRange = new vscode.Range(startPosition, endPosition);
-            await vscode.window.activeTextEditor.edit((editBuilder) => {
-                // re-write the old content in the editor view
-                editBuilder.delete(deleteRange);
-                editBuilder.insert(startPosition, oldDocText);
-            });
-            await vscode.window.activeTextEditor.document.save();
+                const startPosition = new vscode.Position(0, 0);
+                const endPosition = new vscode.Position(oldDocLineCount, 0);
+                const deleteRange = new vscode.Range(startPosition, endPosition);
+                await vscode.window.activeTextEditor.edit((editBuilder) => {
+                    // re-write the old content in the editor view
+                    editBuilder.delete(deleteRange);
+                    editBuilder.insert(startPosition, oldDocText);
+                });
+                await vscode.window.activeTextEditor.document.save();
+            }
         } else {
             log.error(localize("saveUSSFile.log.error.save", "Error encountered when saving USS file: ") + JSON.stringify(err));
             await utils.errorHandling(err, sesName, err.message);
