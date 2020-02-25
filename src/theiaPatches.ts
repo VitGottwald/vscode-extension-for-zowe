@@ -20,9 +20,9 @@ import { IZoweDatasetTreeNode, IZoweUSSTreeNode } from "./api/IZoweTreeNode";
 const localize = nls.config({messageFormat: nls.MessageFormat.file})();
 
 export function willForceUploadDataSet(node: IZoweDatasetTreeNode,
-                                doc: vscode.TextDocument,
-                                path: string,
-                                profile?: IProfileLoaded){
+                                       doc: vscode.TextDocument,
+                                       path: string,
+                                       profile?: IProfileLoaded){
     // Upload without passing the etag
     const uploadOptions: IUploadOptions = {
         returnEtag: true
