@@ -1742,6 +1742,7 @@ export async function saveFile(doc: vscode.TextDocument, datasetProvider: IZoweT
         // TODO: error handling must not be zosmf specific
         } else if (!uploadResponse.success && uploadResponse.commandResponse.includes("Rest API failure with HTTP(S) status 412")) {
             if (ISTHEIA) {
+                // This is a temporary patch until https://github.com/eclipse-theia/theia/issues/7036 is fixed
                 theiaPatch.willForceUploadDataSet(node, doc, label, profile);
             } else {
                 const downloadResponse = await ZoweExplorerApiRegister.getMvsApi(node ? node.getProfile(): profile).getContents(label, {
@@ -1847,6 +1848,7 @@ export async function saveUSSFile(doc: vscode.TextDocument, ussFileProvider: IZo
         // TODO: error handling must not be zosmf specific
         if (err.message.includes("Rest API failure with HTTP(S) status 412")) {
             if (ISTHEIA) {
+                // This is a temporary patch until https://github.com/eclipse-theia/theia/issues/7036 is fixed
                 theiaPatch.willForceUploadUSS(node, doc, sesNode.getProfile(), remote, binary, returnEtag);
             } else {
                 // Store old document text in a separate variable, to be used on merge conflict
