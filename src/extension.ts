@@ -1739,7 +1739,7 @@ export async function saveFile(doc: vscode.TextDocument, datasetProvider: IZoweT
             if (node) {
                 node.setEtag(uploadResponse.apiResponse[0].etag);
             }
-        // TODO: remove message from localization file
+        // TODO: error handling must not be zosmf specific
         } else if (!uploadResponse.success && uploadResponse.commandResponse.includes("Rest API failure with HTTP(S) status 412")) {
             if (ISTHEIA) {
                 theiaPatch.willForceUploadDataSet(node, doc, label, profile);
@@ -1845,7 +1845,7 @@ export async function saveUSSFile(doc: vscode.TextDocument, ussFileProvider: IZo
         }
     } catch (err) {
         // TODO: error handling must not be zosmf specific
-        if (err.message.includes(localize("saveFile.error.ZosmfEtagMismatchError", "Rest API failure with HTTP(S) status 412"))) {
+        if (err.message.includes("Rest API failure with HTTP(S) status 412")) {
             if (ISTHEIA) {
                 theiaPatch.willForceUploadUSS(node, doc, sesNode.getProfile(), remote, binary, returnEtag);
             } else {
