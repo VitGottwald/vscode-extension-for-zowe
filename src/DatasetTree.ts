@@ -9,8 +9,8 @@
 *                                                                                 *
 */
 
-import * as zowe from "@brightside/core";
-import { IProfileLoaded, Logger } from "@brightside/imperative";
+import * as zowe from "@zowe/cli";
+import { IProfileLoaded, Logger } from "@zowe/imperative";
 import * as path from "path";
 import * as vscode from "vscode";
 import * as nls from "vscode-nls";
@@ -47,9 +47,9 @@ export async function createDatasetTree(log: Logger) {
  * @implements {vscode.TreeDataProvider}
  */
 export class DatasetTree extends ZoweTreeProvider implements IZoweTree<IZoweDatasetTreeNode> {
-
     private static readonly persistenceSchema: string = "Zowe-DS-Persistent";
-    private static readonly defaultDialogText: string = "\uFF0B " + localize("defaultFilterPrompt.option.prompt.search", "Create a new filter. Comma separate multiple entries (pattern 1, pattern 2, ...)");
+    private static readonly defaultDialogText: string = "\uFF0B " + localize("defaultFilterPrompt.option.prompt.search",
+        "Create a new filter. Comma separate multiple entries (pattern 1, pattern 2, ...)");
     public mFavoriteSession: ZoweDatasetNode;
 
     public mSessionNodes: IZoweDatasetTreeNode[] = [];
@@ -63,6 +63,52 @@ export class DatasetTree extends ZoweTreeProvider implements IZoweTree<IZoweData
         this.mFavoriteSession.iconPath = applyIcons(this.mFavoriteSession);
         this.mSessionNodes = [this.mFavoriteSession];
         this.treeView = vscode.window.createTreeView("zowe.explorer", {treeDataProvider: this});
+    }
+
+    /**
+     * Rename data sets
+     *
+     * @export
+     * @param {ZoweDatasetNode} node - The node
+     * @param {DatasetTree} datasetProvider - the tree which contains the nodes
+     */
+    public async rename(node: IZoweDatasetTreeNode) {
+        switch (node.contextValue) {
+            case extension.DS_DS_CONTEXT:
+            case (extension.DS_DS_CONTEXT + extension.FAV_SUFFIX):
+                return extension.renameDataSet(node, this);
+            case extension.DS_MEMBER_CONTEXT:
+            case (extension.DS_MEMBER_CONTEXT + extension.FAV_SUFFIX):
+                return extension.renameDataSetMember(node, this);
+        }
+    }
+
+    public open(node: IZoweDatasetTreeNode, preview: boolean) {
+        throw new Error("Method not implemented.");
+    }
+    public copy(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public paste(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public delete(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public saveSearch(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public saveFile(document: vscode.TextDocument) {
+        throw new Error("Method not implemented.");
+    }
+    public refreshPS(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public uploadDialog(node: IZoweDatasetTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public filterPrompt(node: IZoweDatasetTreeNode) {
+        return this.datasetFilterPrompt(node);
     }
 
     /**
@@ -159,7 +205,7 @@ export class DatasetTree extends ZoweTreeProvider implements IZoweTree<IZoweData
     /**
      * Returns the tree view for the current DatasetTree
      *
-     * @returns {vscode.TreeView<ZoweNode>}
+     * @returns {vscode.TreeView<IZoweDatasetTreeNode>}
      */
     public getTreeView(): vscode.TreeView<IZoweDatasetTreeNode> {
         return this.treeView;
@@ -371,7 +417,8 @@ export class DatasetTree extends ZoweTreeProvider implements IZoweTree<IZoweData
                     baseEncd = values [2];
                 }
             } catch (error) {
-                await errorHandling(error, node.getProfileName(), localize("datasetTree.error", "Error encountered in ") + `datasetFilterPrompt.optionalProfiles!`);
+                await errorHandling(error, node.getProfileName(),
+                    localize("datasetTree.error", "Error encountered in ") + `datasetFilterPrompt.optionalProfiles!`);
             }
             if (usrNme !== undefined && passWrd !== undefined && baseEncd !== undefined) {
                 node.getSession().ISession.user = usrNme;
@@ -473,7 +520,7 @@ export class DatasetTree extends ZoweTreeProvider implements IZoweTree<IZoweData
             }
             // Uses loaded profile to create a session with the MVS API
             const session = ZoweExplorerApiRegister.getMvsApi(profile).getSession();
-            // Creates ZoweNode to track new session and pushes it to mSessionNodes
+            // Creates ZoweDatasetNode to track new session and pushes it to mSessionNodes
             const node = new ZoweDatasetNode(
                 profile.name, vscode.TreeItemCollapsibleState.Collapsed, null, session, undefined, undefined, profile);
             node.contextValue = extension.DS_SESSION_CONTEXT;

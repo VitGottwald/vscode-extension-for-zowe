@@ -10,10 +10,8 @@
 */
 
 import * as vscode from "vscode";
-import * as zowe from "@brightside/core";
-import { Session, IProfileLoaded } from "@brightside/imperative";
-// tslint:disable-next-line: no-duplicate-imports
-import { IJob, IJobFile } from "@brightside/core";
+import * as zowe from "@zowe/cli";
+import { Session, IProfileLoaded } from "@zowe/imperative";
 import * as extension from "./extension";
 import { IZoweJobTreeNode } from "./api/IZoweTreeNode";
 import { ZoweTreeNode } from "./abstract/ZoweTreeNode";
@@ -44,7 +42,7 @@ export class Job extends ZoweTreeNode implements IZoweJobTreeNode {
                 collapsibleState: vscode.TreeItemCollapsibleState,
                 mParent: IZoweJobTreeNode,
                 session: Session,
-                public job: IJob,
+                public job: zowe.IJob,
                 profile: IProfileLoaded) {
         super(label, collapsibleState, mParent, session, profile);
         if (session) {
@@ -185,7 +183,7 @@ export class Job extends ZoweTreeNode implements IZoweJobTreeNode {
         return this._searchId;
     }
 
-    private async getJobs(owner, prefix, searchId): Promise<IJob[]> {
+    private async getJobs(owner, prefix, searchId): Promise<zowe.IJob[]> {
         let jobsInternal: zowe.IJob[] = [];
         if (this.searchId.length > 0 ) {
             jobsInternal.push(await ZoweExplorerApiRegister.getJesApi(this.getProfile()).getJob(searchId));
@@ -203,7 +201,7 @@ export class Job extends ZoweTreeNode implements IZoweJobTreeNode {
 // tslint:disable-next-line: max-classes-per-file
 class Spool extends Job {
     constructor(label: string, mCollapsibleState: vscode.TreeItemCollapsibleState, mParent: IZoweJobTreeNode,
-                session: Session, spool: IJobFile, job: IJob, parent: IZoweJobTreeNode) {
+                session: Session, spool: zowe.IJobFile, job: zowe.IJob, parent: IZoweJobTreeNode) {
         super(label, mCollapsibleState, mParent, session, job, parent.getProfile());
         this.contextValue = extension.JOBS_SPOOL_CONTEXT;
         utils.applyIcons(this);

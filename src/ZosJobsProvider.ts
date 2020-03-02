@@ -10,9 +10,8 @@
 */
 
 import * as vscode from "vscode";
-import { ZosmfSession, IJob, DeleteJobs } from "@brightside/core";
-import { IProfileLoaded, Logger } from "@brightside/imperative";
-// tslint:disable-next-line: no-duplicate-imports
+import { ZosmfSession, IJob, DeleteJobs } from "@zowe/cli";
+import { IProfileLoaded, Logger } from "@zowe/imperative";
 import { Profiles } from "./Profiles";
 import { Job } from "./ZoweJobNode";
 import {
@@ -74,6 +73,57 @@ export class ZosJobsProvider extends ZoweTreeProvider implements IZoweTree<IZowe
         this.mFavoriteSession.iconPath = applyIcons(this.mFavoriteSession);
         this.mSessionNodes = [this.mFavoriteSession];
         this.treeView = vscode.window.createTreeView("zowe.jobs", {treeDataProvider: this});
+    }
+
+    public rename(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public open(node: IZoweJobTreeNode, preview: boolean) {
+        throw new Error("Method not implemented.");
+    }
+    public copy(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public paste(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public delete(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    /**
+     * Adds a save search to the Jobs favorites list
+     *
+     * @param {IZoweJobTreeNode} node
+     */
+    public async saveSearch(node: IZoweJobTreeNode) {
+        const favSessionContext = extension.JOBS_SESSION_CONTEXT + extension.FAV_SUFFIX;
+        const favJob = new Job("[" + node.getProfileName() + "]: " +
+            this.createSearchLabel(node.owner, node.prefix, node.searchId),
+        vscode.TreeItemCollapsibleState.None, node.getParent(), node.getSession(), node.job, node.getProfile());
+        favJob.owner = node.owner;
+        favJob.prefix = node.prefix;
+        favJob.searchId = node.searchId;
+        favJob.contextValue = favSessionContext;
+        favJob.command = { command: "zowe.jobs.search", title: "", arguments: [favJob] };
+        favJob.iconPath = applyIcons(favJob);
+        if (!this.mFavorites.find((tempNode) => tempNode.label === favJob.label)) {
+            this.mFavorites.push(favJob);
+            sortTreeItems(this.mFavorites, favSessionContext);
+            await this.updateFavorites();
+            this.refreshElement(this.mFavoriteSession);
+        }
+    }
+    public saveFile(document: vscode.TextDocument) {
+        throw new Error("Method not implemented.");
+    }
+    public refreshPS(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public uploadDialog(node: IZoweJobTreeNode) {
+        throw new Error("Method not implemented.");
+    }
+    public filterPrompt(node: IZoweJobTreeNode) {
+        return this.searchPrompt(node);
     }
 
     /**
@@ -212,29 +262,6 @@ export class ZosJobsProvider extends ZoweTreeProvider implements IZoweTree<IZowe
     }
 
     /**
-     * Adds a save search to the Jobs favorites list
-     *
-     * @param {IZoweJobTreeNode} node
-     */
-    public async saveSearch(node: IZoweJobTreeNode) {
-        const favSessionContext = extension.JOBS_SESSION_CONTEXT + extension.FAV_SUFFIX;
-        const favJob = new Job("[" + node.getProfileName() + "]: " +
-            this.createSearchLabel(node.owner, node.prefix, node.searchId),
-        vscode.TreeItemCollapsibleState.None, node.getParent(), node.getSession(), node.job, node.getProfile());
-        favJob.owner = node.owner;
-        favJob.prefix = node.prefix;
-        favJob.searchId = node.searchId;
-        favJob.contextValue = favSessionContext;
-        favJob.command = { command: "zowe.jobs.search", title: "", arguments: [favJob] };
-        favJob.iconPath = applyIcons(favJob);
-        if (!this.mFavorites.find((tempNode) => tempNode.label === favJob.label)) {
-            this.mFavorites.push(favJob);
-            sortTreeItems(this.mFavorites, favSessionContext);
-            await this.updateFavorites();
-            this.refreshElement(this.mFavoriteSession);
-        }
-    }
-    /**
      * Removes a node from the favorites list
      *
      * @param {IZoweJobTreeNode} node
@@ -351,7 +378,8 @@ export class ZosJobsProvider extends ZoweTreeProvider implements IZoweTree<IZowe
                         options = {
                             prompt: localize("jobsFilterPrompt.option.prompt.owner",
                             "Enter the Job Owner. Default is *."),
-                            validateInput: (value: string) => (value.match(/ /g) ? localize("jobs.enter.valid.owner", "Please enter a valid owner name (no spaces allowed).") : ""),
+                            validateInput: (value: string) => (value.match(/ /g) ? localize("jobs.enter.valid.owner",
+                                "Please enter a valid owner name (no spaces allowed).") : ""),
                             value: node.owner
                         };
                         // get user input
@@ -555,7 +583,7 @@ export class ZosJobsProvider extends ZoweTreeProvider implements IZoweTree<IZowe
             if (this.mSessionNodes.find((tempNode) => tempNode.label.trim() === zosmfProfile.name)) {
                 return;
             }
-            // Uses loaded profile to create a zosmf session with brightside
+            // Uses loaded profile to create a zosmf session with Zowe
             const session = ZosmfSession.createBasicZosmfSession(zosmfProfile.profile);
             // Creates ZoweNode to track new session and pushes it to mSessionNodes
             const node = new Job(zosmfProfile.name, vscode.TreeItemCollapsibleState.Collapsed, null, session, null, zosmfProfile);

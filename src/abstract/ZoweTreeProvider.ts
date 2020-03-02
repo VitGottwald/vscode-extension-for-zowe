@@ -10,12 +10,11 @@
 */
 
 import * as vscode from "vscode";
-import { Logger } from "@brightside/imperative";
-// tslint:disable-next-line: no-duplicate-imports
+import { Logger } from "@zowe/imperative";
 import { Profiles } from "../Profiles";
 import { PersistentFilters } from "../PersistentFilters";
 import { OwnerFilterDescriptor, applyIcons } from "../utils";
-import { IZoweTreeNode } from "../api/IZoweTreeNode";
+import { IZoweTreeNode, IZoweDatasetTreeNode } from "../api/IZoweTreeNode";
 import * as extension from "../extension";
 
 // tslint:disable-next-line: max-classes-per-file
@@ -61,7 +60,7 @@ export class ZoweTreeProvider {
      * Called whenever the tree needs to be refreshed, and fires the data change event
      *
      */
-    public refreshElement(element: IZoweTreeNode): void {
+    public refreshElement(element: IZoweDatasetTreeNode): void {
         element.dirty = true;
         this.mOnDidChangeTreeData.fire(element);
     }
@@ -136,6 +135,10 @@ export class ZoweTreeProvider {
         }
     }
 
+    public getHistory() {
+        return this.mHistory.getHistory();
+    }
+
     public async addHistory(criteria: string) {
         if (criteria) {
             this.mHistory.addHistory(criteria);
@@ -143,6 +146,19 @@ export class ZoweTreeProvider {
         }
     }
 
+    public findNonFavoritedNode(element: IZoweTreeNode) {
+        return undefined;
+    }
+
+    public findFavoritedNode(element: IZoweTreeNode) {
+        return undefined;
+    }
+    public renameFavorite(node: IZoweTreeNode, newLabel: string) {
+        return undefined;
+    }
+    public renameNode(profile: string, beforeDataSetName: string, afterDataSetName: string) {
+        return undefined;
+    }
     protected deleteSessionByLabel(revisedLabel: string) {
         if (revisedLabel.includes("[")) {
             revisedLabel = revisedLabel.substring(0, revisedLabel.indexOf(" ["));
