@@ -1723,6 +1723,7 @@ export async function saveFile(doc: vscode.TextDocument, datasetProvider: IZoweT
             }
         } else if (!uploadResponse.success && uploadResponse.commandResponse.includes(
             localize("saveFile.error.ZosmfEtagMismatchError", "Rest API failure with HTTP(S) status 412"))) {
+            const oldDocText = doc.getText();
             const downloadResponse = await ZoweExplorerApiRegister.getMvsApi(node ? node.getProfile(): profile).getContents(label, {
                 file: doc.fileName,
                 returnEtag: true
@@ -1735,17 +1736,16 @@ export async function saveFile(doc: vscode.TextDocument, datasetProvider: IZoweT
             vscode.window.showWarningMessage(localize("saveFile.error.etagMismatch",
                 "Remote file has been modified in the meantime.\nSelect 'Compare' to resolve the conflict."));
             // Store document in a separate variable, to be used on merge conflict
-            const oldDoc = doc;
-            const oldDocText = oldDoc.getText();
             const startPosition = new vscode.Position(0, 0);
-            const endPosition = new vscode.Position(oldDoc.lineCount, 0);
+            const endPosition = new vscode.Position(doc.lineCount, 0);
             const deleteRange = new vscode.Range(startPosition, endPosition);
             await vscode.window.activeTextEditor.edit((editBuilder) => {
                 // re-write the old content in the editor view
                 editBuilder.delete(deleteRange);
                 editBuilder.insert(startPosition, oldDocText);
             });
-            await vscode.window.activeTextEditor.document.save();
+            // trigger file save event
+            vscode.window.activeTextEditor.document.save();
         } else {
             vscode.window.showErrorMessage(uploadResponse.commandResponse);
         }
